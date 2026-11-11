@@ -1,0 +1,67 @@
+services:
+  # rabbitmq service
+  rabbitmq:
+    image: rabbitmq:3-management
+    mem_limit: 512m
+    container_name: rabbitmq
+    ports:
+        - "5672:5672"
+        - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # entregas db
+  db-entregas:
+    image: postgres:18
+    container_name: db-entregas
+    environment:
+      POSTGRES_DB: encomendas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+  # entregas service
+  entregas-service:
+    build: ./gerenciaentregas
+    container_name: entregas-service
+    ports:
+      - "8080:8081"
+    depends_on:
+      - db-entregas
+      - rabbitmq
+    environment:
+      DB_NAME: encomendas
+      DB_USER: postgres
+      DB_PASS: postgres
+      SPRING_RABBITMQ_HOST: rabbitmq
+  # notificacoes db
+  db-notificacoes:
+    image: postgres:18
+    container_name: db-notificacoes
+    environment:
+      POSTGRES_DB: notificacoes_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+  # notificacoes service
+  notification-service:
+    build: ./notificaentregas
+    container_name: notificacoes-service
+    ports:
+      - "8082:8081"
+    depends_on:
+      - db-notificacoes
+      - rabbitmq
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      DB_NAME: notificacoes_db
+      DB_USER: postgres
+      DB_PASS: postgres
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-brenda.alexandra.souza@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-swmsskbhodexminx}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@entregas.notificacoes.com}
